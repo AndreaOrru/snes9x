@@ -2,11 +2,15 @@
 
 #include <unordered_map>
 #include <unordered_set>
+#include <sqlite3.h>
 #include "snes9x.h"
+#include "display.h"
 #include "debug.h"
 #include "gilgamesh.h"
 
 extern int AddrModes[256];
+
+static sqlite3* Database;
 
 struct SInstruction
 {
@@ -275,6 +279,13 @@ struct SInstruction
 
 static std::unordered_map<uint32, SInstruction> Instructions;
 
+template<typename... TArgs> void SQL(const char* Format, TArgs... Args)
+{
+    static char S[4096];
+    sprintf(S, Format, Args...);
+    sqlite3_exec(Database, S, NULL, NULL, NULL);
+}
+
 void GilgameshTrace(uint8 Bank, uint16 Address)
 {
 	uint32 PC = (Bank << 16) | Address;
@@ -290,12 +301,42 @@ void GilgameshTrace(uint8 Bank, uint16 Address)
 
 void GilgameshSave()
 {
-	for (auto& Pair: Instructions)
+    std::string DatabasePath = S9xGetDirectory(LOG_DIR);
+    DatabasePath += "/gilgamesh.db";
+    sqlite3_open(DatabasePath.c_str(), &Database);
+
+    SQL("CREATE TABLE instructions(pc      INTEGER PRIMARY KEY,"
+                                  "opcode  INTEGER NOT NULL,"
+                                  "size    INTEGER NOT NULL,"
+                                  "operand INTEGER)");
+
+    SQL("CREATE TABLE direct_references(pointer INTEGER,"
+                                       "pointee INTEGER,"
+                                       "PRIMARY KEY (pointer, pointee))");
+
+    SQL("CREATE TABLE indirect_references(pointer INTEGER,"
+                                         "pointee INTEGER,"
+                                         "PRIMARY KEY (pointer, pointee))");
+    
+    SQL("BEGIN TRANSACTION");    
+    for (auto& KeyValue: Instructions)
 	{
-		auto& Instruction = Pair.second;
-		
-		printf("$%06X: $%02X ($%06X)\n", Instruction.PC, Instruction.Opcode, Instruction.Operand);
+		SInstruction& I = KeyValue.second;
+
+        if (I.Operand != -1)
+            SQL("INSERT INTO instructions VALUES(%u, %u, %u, %d)",   I.PC, I.Opcode, I.Size, I.Operand);
+        else
+            SQL("INSERT INTO instructions VALUES(%u, %u, %u, NULL)", I.PC, I.Opcode, I.Size);
+
+        for (int DirectReference: I.References)
+            SQL("INSERT INTO direct_references VALUES(%d, %d)",   I.PC, DirectReference);
+
+        for (int IndirectReference: I.IndirectReferences)
+            SQL("INSERT INTO indirect_references VALUES(%d, %d)", I.PC, IndirectReference);
 	}
+    SQL("COMMIT TRANSACTION");
+
+    sqlite3_close(Database);
 }
 
 #endif
