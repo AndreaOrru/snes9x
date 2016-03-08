@@ -190,6 +190,7 @@ struct SBreakPoint
 	uint16	Address;
 };
 
+/* Disable trace files.
 #define ENSURE_TRACE_OPEN(fp, file, mode) \
 	if (!fp) \
 	{ \
@@ -197,6 +198,8 @@ struct SBreakPoint
 		fn += SLASH_STR file; \
 		fp = fopen(fn.c_str(), mode); \
 	}
+*/
+#define ENSURE_TRACE_OPEN(fp, file, mode) {}
 
 extern struct SBreakPoint	S9xBreakpoint[6];
 
