@@ -187,6 +187,7 @@
 #include "display.h"
 #include "debug.h"
 #include "missing.h"
+#include "gilgamesh.h"
 
 extern SDMA	DMA[8];
 extern FILE	*apu_trace;
@@ -297,7 +298,7 @@ static const char	*S9xMnemonics[256] =
 	"SED", "SBC", "PLX", "XCE", "JSR", "SBC", "INC", "SBC"
 };
 
-static int	AddrModes[256] =
+int AddrModes[256] =
 {
   // 0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
 	 3, 10,  3, 19,  6,  6,  6, 12,  0,  1, 24,  0, 14, 14, 14, 17, // 0
@@ -318,8 +319,6 @@ static int	AddrModes[256] =
 	 4, 11,  9, 20, 26,  7,  7, 13,  0, 16,  0,  0, 23, 15, 15, 18  // F
 };
 
-static uint8 S9xDebugGetByte (uint32);
-static uint16 S9xDebugGetWord (uint32);
 static uint8 S9xDebugSA1GetByte (uint32);
 static uint16 S9xDebugSA1GetWord (uint32);
 static uint8 debug_cpu_op_print (char *, uint8, uint16);
@@ -333,8 +332,7 @@ static const char * debug_clip_fn (int);
 static void debug_whats_used (void);
 static void debug_whats_missing (void);
 
-
-static uint8 S9xDebugGetByte (uint32 Address)
+uint8 S9xDebugGetByte (uint32 Address)
 {
 	int		block = (Address & 0xffffff) >> MEMMAP_SHIFT;
 	uint8	*GetAddress = Memory.Map[block];
@@ -371,7 +369,7 @@ static uint8 S9xDebugGetByte (uint32 Address)
 	}
 }
 
-static uint16 S9xDebugGetWord (uint32 Address)
+uint16 S9xDebugGetWord (uint32 Address)
 {
 	uint16	word;
 
@@ -1872,7 +1870,10 @@ static void debug_process_command (char *Line)
 	}
 
 	if (*Line == 'q')
+	{
+		GilgameshSave();
 		S9xExit();
+	}
 
 	if (*Line == 'W')
 		debug_whats_missing();
@@ -2563,12 +2564,14 @@ void S9xDoDebug (void)
 // This function gets called at each instruction when tracing:
 void S9xTrace (void)
 {
-	char	msg[512];
+	/*char	msg[512];
 
 	ENSURE_TRACE_OPEN(trace, "trace.log", "a")
 
 	debug_cpu_op_print(msg, Registers.PB, Registers.PCw);
-	fprintf(trace, "%s\n", msg);
+	fprintf(trace, "%s\n", msg);*/
+
+	GilgameshTrace(Registers.PB, Registers.PCw);
 }
 
 void S9xSA1Trace (void)
@@ -2583,19 +2586,19 @@ void S9xSA1Trace (void)
 
 void S9xTraceMessage (const char *s)
 {
-	if (s)
+	/*if (s)
 	{
 		if (trace)
 			fprintf(trace, "%s\n", s);
 		else
 		if (trace2)
 			fprintf(trace2, "%s\n", s);
-	}
+	}*/
 }
 
 void S9xTraceFormattedMessage (const char *s, ...)
 {
-	char	msg[512];
+	/*char	msg[512];
 
 	if (s)
 	{
@@ -2606,7 +2609,7 @@ void S9xTraceFormattedMessage (const char *s, ...)
 		va_end(argptr);
 
 		S9xTraceMessage(msg);
-	}
+	}*/
 }
 
 void S9xPrintHVPosition (char *s)

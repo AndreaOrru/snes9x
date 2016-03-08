@@ -206,6 +206,8 @@ void S9xSA1Trace (void);
 void S9xTraceMessage (const char *);
 void S9xTraceFormattedMessage (const char *, ...);
 void S9xPrintHVPosition (char *);
+uint8 S9xDebugGetByte (uint32);
+uint16 S9xDebugGetWord (uint32);
 
 #endif
 
