@@ -284,8 +284,8 @@ void GilgameshTrace(uint8 Bank, uint16 Address)
 	 * - Otherwise, create an "empty" instruction with the given PC.
 	 * Then decode the instruction. */
 	Instructions.emplace(std::piecewise_construct,
-						 std::forward_as_tuple(PC),
-						 std::forward_as_tuple(PC)).first->second.Decode();
+	                     std::forward_as_tuple(PC),
+	                     std::forward_as_tuple(PC)).first->second.Decode();
 }
 
 void GilgameshSave()
