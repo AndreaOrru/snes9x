@@ -190,7 +190,7 @@ struct SBreakPoint
 	uint16	Address;
 };
 
-/* Disable trace files.
+/*
 #define ENSURE_TRACE_OPEN(fp, file, mode) \
 	if (!fp) \
 	{ \

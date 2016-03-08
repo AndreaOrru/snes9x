@@ -2561,7 +2561,6 @@ void S9xDoDebug (void)
 		S9xGraphicsMode();
 }
 
-// This function gets called at each instruction when tracing:
 void S9xTrace (void)
 {
 	/*char	msg[512];
