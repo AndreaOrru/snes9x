@@ -31,7 +31,7 @@ struct SInstruction
 	std::unordered_set<int> References;
 	std::unordered_set<int> IndirectReferences;
 
-    SInstruction(uint32 PC) : PC(PC) {}
+    explicit SInstruction(uint32 PC) : PC(PC) {}
 	
 	void Decode()
 	{
