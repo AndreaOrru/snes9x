@@ -8,9 +8,31 @@
 #include "debug.h"
 #include "gilgamesh.h"
 
+#define SQL(...) \
+    do { if (SQLExec(__VA_ARGS__) != SQLITE_OK) return; } while (0)
+
+static const int UNDEFINED = -1;
+static sqlite3* Database;
 extern int AddrModes[256];
 
-static sqlite3* Database;
+template<typename... TArgs> int SQLExec(const char* Format, TArgs... Args)
+{
+    int Status;
+    char* Error;
+
+    static char S[4096];
+    sprintf(S, Format, Args...);
+
+    Status = sqlite3_exec(Database, S, NULL, NULL, &Error);
+    if (Status != SQLITE_OK)
+    {
+        fprintf(stderr, "SQL error: %s\n", Error);
+        sqlite3_free(Error);
+        sqlite3_close(Database);
+    }
+
+    return Status;
+}
 
 struct SInstruction
 {
@@ -27,7 +49,7 @@ struct SInstruction
     uint8 Opcode;
     uint8 Size;
 
-    int Operand = -1;
+    int Operand = UNDEFINED;
     std::unordered_set<int> References;
     std::unordered_set<int> IndirectReferences;
 
@@ -35,9 +57,8 @@ struct SInstruction
 
     void Decode()
     {
-        int Reference = -1;
-        int IndirectReference = -1;
-
+        int Reference = UNDEFINED;
+        int IndirectReference = UNDEFINED;
         uint8 Operands[3];
 
         Opcode      = S9xDebugGetByte(PC);
@@ -212,7 +233,7 @@ struct SInstruction
                 Operand = Operands[0];
                 Reference = Operand + Registers.S.W;
                 IndirectReference = (Registers.DB << 16) | ((S9xDebugGetWord(Reference) + Registers.Y.W) & 0xFFFF);
-                Reference = -1;  // Don't keep track of stack positions.
+                Reference = UNDEFINED;  // Don't keep track of stack positions.
                 Size = 2;
                 break;
 
@@ -269,22 +290,15 @@ struct SInstruction
                 break;
         }
 
-        if (Reference != -1)
+        if (Reference != UNDEFINED)
             this->References.insert(Reference);
 
-        if (IndirectReference != -1)
+        if (IndirectReference != UNDEFINED)
             this->IndirectReferences.insert(IndirectReference);
     }
 };
 
 static std::unordered_map<uint32, SInstruction> Instructions;
-
-template<typename... TArgs> void SQL(const char* Format, TArgs... Args)
-{
-    static char S[4096];
-    sprintf(S, Format, Args...);
-    sqlite3_exec(Database, S, NULL, NULL, NULL);
-}
 
 void GilgameshTrace(uint8 Bank, uint16 Address)
 {
@@ -303,17 +317,26 @@ void GilgameshSave()
 {
     std::string DatabasePath = S9xGetDirectory(LOG_DIR);
     DatabasePath += "/gilgamesh.db";
-    sqlite3_open(DatabasePath.c_str(), &Database);
 
+    int Status = sqlite3_open(DatabasePath.c_str(), &Database);
+    if (Status != SQLITE_OK)
+    {
+        fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(Database));
+        return;
+    }
+
+    SQL("DROP TABLE IF EXISTS instructions");
     SQL("CREATE TABLE instructions(pc      INTEGER PRIMARY KEY,"
                                   "opcode  INTEGER NOT NULL,"
                                   "size    INTEGER NOT NULL,"
                                   "operand INTEGER)");
 
+    SQL("DROP TABLE IF EXISTS direct_references");
     SQL("CREATE TABLE direct_references(pointer INTEGER,"
                                        "pointee INTEGER,"
                                        "PRIMARY KEY (pointer, pointee))");
 
+    SQL("DROP TABLE IF EXISTS indirect_references");
     SQL("CREATE TABLE indirect_references(pointer INTEGER,"
                                          "pointee INTEGER,"
                                          "PRIMARY KEY (pointer, pointee))");
@@ -323,13 +346,15 @@ void GilgameshSave()
     {
         SInstruction& I = KeyValue.second;
 
-        if (I.Operand != -1)
-            SQL("INSERT INTO instructions VALUES(%u, %u, %u, %d)",   I.PC, I.Opcode, I.Size, I.Operand);
+        if (I.Operand != UNDEFINED)
+            SQL("INSERT INTO instructions VALUES(%u, %u, %u, %d)", I.PC, I.Opcode, I.Size, I.Operand);
         else
             SQL("INSERT INTO instructions VALUES(%u, %u, %u, NULL)", I.PC, I.Opcode, I.Size);
 
+        if (Status != SQLITE_OK) return;
+
         for (int DirectReference: I.References)
-            SQL("INSERT INTO direct_references VALUES(%d, %d)",   I.PC, DirectReference);
+            SQL("INSERT INTO direct_references VALUES(%d, %d)", I.PC, DirectReference);
 
         for (int IndirectReference: I.IndirectReferences)
             SQL("INSERT INTO indirect_references VALUES(%d, %d)", I.PC, IndirectReference);

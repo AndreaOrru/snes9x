@@ -190,15 +190,6 @@ struct SBreakPoint
 	uint16	Address;
 };
 
-/*
-#define ENSURE_TRACE_OPEN(fp, file, mode) \
-	if (!fp) \
-	{ \
-		std::string fn = S9xGetDirectory(LOG_DIR); \
-		fn += SLASH_STR file; \
-		fp = fopen(fn.c_str(), mode); \
-	}
-*/
 #define ENSURE_TRACE_OPEN(fp, file, mode) {}
 
 extern struct SBreakPoint	S9xBreakpoint[6];
