@@ -12,6 +12,8 @@
     do { if (SQLExec(__VA_ARGS__) != SQLITE_OK) return; } while (0)
 
 static const int UNDEFINED = -1;
+enum { DIRECT_REFERENCE = 0, INDIRECT_REFERENCE = 1 };
+
 static sqlite3* Database;
 extern int AddrModes[256];
 
@@ -331,15 +333,11 @@ void GilgameshSave()
                                   "size    INTEGER NOT NULL,"
                                   "operand INTEGER)");
 
-    SQL("DROP TABLE IF EXISTS direct_references");
-    SQL("CREATE TABLE direct_references(pointer INTEGER,"
-                                       "pointee INTEGER,"
-                                       "PRIMARY KEY (pointer, pointee))");
-
-    SQL("DROP TABLE IF EXISTS indirect_references");
-    SQL("CREATE TABLE indirect_references(pointer INTEGER,"
-                                         "pointee INTEGER,"
-                                         "PRIMARY KEY (pointer, pointee))");
+    SQL("DROP TABLE IF EXISTS references_");
+    SQL("CREATE TABLE references_(pointer INTEGER,"
+                                 "pointee INTEGER,"
+                                 "type    INTEGER,"
+                                 "PRIMARY KEY (pointer, pointee, type))");
 
     SQL("BEGIN TRANSACTION");
     for (auto& KeyValue: Instructions)
@@ -354,10 +352,10 @@ void GilgameshSave()
         if (Status != SQLITE_OK) return;
 
         for (int DirectReference: I.References)
-            SQL("INSERT INTO direct_references VALUES(%d, %d)", I.PC, DirectReference);
+            SQL("INSERT INTO references_ VALUES(%d, %d, %d)", I.PC, DirectReference, DIRECT_REFERENCE);
 
         for (int IndirectReference: I.IndirectReferences)
-            SQL("INSERT INTO indirect_references VALUES(%d, %d)", I.PC, IndirectReference);
+            SQL("INSERT INTO references_ VALUES(%d, %d, %d)", I.PC, IndirectReference, INDIRECT_REFERENCE);
     }
     SQL("COMMIT TRANSACTION");
 
