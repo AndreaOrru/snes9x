@@ -301,6 +301,7 @@ struct SInstruction
 };
 
 static std::unordered_map<uint32, SInstruction> Instructions;
+static std::unordered_map<uint32, VectorType> Vectors;
 
 void GilgameshTrace(uint8 Bank, uint16 Address)
 {
@@ -313,6 +314,11 @@ void GilgameshTrace(uint8 Bank, uint16 Address)
     Instructions.emplace(std::piecewise_construct,
                          std::forward_as_tuple(PC),
                          std::forward_as_tuple(PC)).first->second.Decode();
+}
+
+void GilgameshTraceVector(uint32 PC, VectorType Type)
+{
+    Vectors[PC] = Type;
 }
 
 void GilgameshSave()
@@ -339,6 +345,14 @@ void GilgameshSave()
                                  "type    INTEGER,"
                                  "PRIMARY KEY (pointer, pointee, type))");
 
+    SQL("DROP TABLE IF EXISTS vectors");
+    SQL("CREATE TABLE vectors(pc   INTEGER PRIMARY KEY,"
+                             "type INTEGER NOT NULL)");
+
+    SQL("DROP TABLE IF EXISTS labels");
+    SQL("CREATE TABLE labels(address INTEGER PRIMARY KEY,"
+                            "name    TEXT NOT NULL)");
+
     SQL("BEGIN TRANSACTION");
     for (auto& KeyValue: Instructions)
     {
@@ -349,13 +363,16 @@ void GilgameshSave()
         else
             SQL("INSERT INTO instructions VALUES(%u, %u, %u, NULL)", I.PC, I.Opcode, I.Size);
 
-        if (Status != SQLITE_OK) return;
-
         for (int DirectReference: I.References)
             SQL("INSERT INTO references_ VALUES(%d, %d, %d)", I.PC, DirectReference, DIRECT_REFERENCE);
-
         for (int IndirectReference: I.IndirectReferences)
             SQL("INSERT INTO references_ VALUES(%d, %d, %d)", I.PC, IndirectReference, INDIRECT_REFERENCE);
+    }
+    for (auto& KeyValue: Vectors)
+    {
+        uint32 PC = KeyValue.first;
+        VectorType Type = KeyValue.second;
+        SQL("INSERT INTO vectors VALUES(%d, %d)", PC, Type);
     }
     SQL("COMMIT TRANSACTION");
 

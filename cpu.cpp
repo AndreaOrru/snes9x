@@ -188,6 +188,7 @@
 #include "logger.h"
 #ifdef DEBUGGER
 #include "debug.h"
+#include "gilgamesh.h"
 #endif
 
 static void S9xResetCPU (void);
@@ -265,6 +266,10 @@ static void S9xSoftResetCPU (void)
 	ICPU.S9xOpLengths = S9xOpLengthsM1X1;
 
 	S9xUnpackStatus();
+
+#ifdef DEBUGGER
+    GilgameshTraceVector(Registers.PC.xPBPC, VECTOR_RESET);
+#endif
 }
 
 void S9xReset (void)

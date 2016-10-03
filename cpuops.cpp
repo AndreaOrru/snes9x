@@ -186,6 +186,7 @@
 #include "display.h"
 #include "debug.h"
 #include "missing.h"
+#include "gilgamesh.h"
 #endif
 
 #ifdef SA1_OPCODES
@@ -2819,6 +2820,10 @@ void S9xOpcode_IRQ (void)
 		}
 	#endif
 	}
+
+#ifdef DEBUGGER
+    GilgameshTraceVector(Registers.PC.xPBPC, VECTOR_IRQ);
+#endif
 }
 
 /* NMI ********************************************************************* */
@@ -2894,6 +2899,10 @@ void S9xOpcode_NMI (void)
 		}
 	#endif
 	}
+
+#ifdef DEBUGGER
+    GilgameshTraceVector(Registers.PC.xPBPC, VECTOR_NMI);
+#endif
 }
 
 /* COP ********************************************************************* */
