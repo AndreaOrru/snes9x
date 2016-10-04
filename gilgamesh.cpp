@@ -93,7 +93,7 @@ struct SInstruction
 
             // Immediate[IndexFlag]:
             case 2:
-                if (!CheckFlag(MemoryFlag))
+                if (!CheckFlag(IndexFlag))
                 {
                     // X/Y 16-bits:
                     Operand = (Operands[1] << 8) | Operands[0];
