@@ -116,14 +116,14 @@ struct SInstruction
             // Relative:
             case 4:
                 Operand = Operands[0];
-                Reference = Address + (int)Operand + 2;
+                Reference = Address + (int8)Operand + 2;
                 Size = 2;
                 break;
 
             // Relative Long:
             case 5:
                 Operand = (Operands[1] << 8) | Operands[0];
-                Reference = Address + (int)Operand + 3;
+                Reference = Address + (int16)Operand + 3;
                 Size = 3;
                 break;
 
