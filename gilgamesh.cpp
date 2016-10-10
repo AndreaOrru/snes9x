@@ -49,7 +49,7 @@ struct SInstruction
     };
 
     uint8 Opcode;
-    uint8 Size;
+    uint8 Flags;
 
     int Operand = UNDEFINED;
     std::unordered_set<int> References;
@@ -68,11 +68,12 @@ struct SInstruction
         Operands[1] = S9xDebugGetByte(PC + 2);
         Operands[2] = S9xDebugGetByte(PC + 3);
 
+        Flags = Registers.P.B.l;
+
         switch (AddrModes[Opcode])
         {
             // Implied:
             case 0:
-                Size = 1;
                 break;
 
             // Immediate[MemoryFlag]:
@@ -81,13 +82,11 @@ struct SInstruction
                 {
                     // Accumulator 16-bits:
                     Operand = (Operands[1] << 8) | Operands[0];
-                    Size = 3;
                 }
                 else
                 {
                     // Accumulator 8-bits:
                     Operand = Operands[0];
-                    Size = 2;
                 }
                 break;
 
@@ -97,55 +96,47 @@ struct SInstruction
                 {
                     // X/Y 16-bits:
                     Operand = (Operands[1] << 8) | Operands[0];
-                    Size = 3;
                 }
                 else
                 {
                     // X/Y 8-bits:
                     Operand = Operands[0];
-                    Size = 2;
                 }
                 break;
 
             // Immediate (always 8-bits):
             case 3:
                 Operand = Operands[0];
-                Size = 2;
                 break;
 
             // Relative:
             case 4:
                 Operand = Operands[0];
                 Reference = Address + (int8)Operand + 2;
-                Size = 2;
                 break;
 
             // Relative Long:
             case 5:
                 Operand = (Operands[1] << 8) | Operands[0];
                 Reference = Address + (int16)Operand + 3;
-                Size = 3;
                 break;
 
             // Direct Page:
             case 6:
                 Operand = Operands[0];
                 Reference = Operand + Registers.D.W;
-                Size = 2;
                 break;
 
             // Direct Page Indexed (with X):
             case 7:
                 Operand = Operands[0];
                 Reference = Operand + Registers.D.W + Registers.X.W;
-                Size = 2;
                 break;
 
             // Direct Page Indexed (with Y):
             case 8:
                 Operand = Operands[0];
                 Reference = Operand + Registers.D.W + Registers.Y.W;
-                Size = 2;
                 break;
 
             // Direct Page Indirect:
@@ -153,7 +144,6 @@ struct SInstruction
                 Operand = Operands[0];
                 Reference = Operand + Registers.D.W;
                 IndirectReference = (Registers.DB << 16) | S9xDebugGetWord(Reference);
-                Size = 2;
                 break;
 
             // Direct Page Indexed Indirect:
@@ -161,7 +151,6 @@ struct SInstruction
                 Operand = Operands[0];
                 Reference = Operand + Registers.D.W + Registers.X.W;
                 IndirectReference = (Registers.DB << 16) | S9xDebugGetWord(Reference);
-                Size = 2;
                 break;
 
             // Direct Page Indirect Indexed:
@@ -169,7 +158,6 @@ struct SInstruction
                 Operand = Operands[0];
                 Reference = Operand + Registers.D.W;
                 IndirectReference = (Registers.DB << 16) | ((S9xDebugGetWord(Reference) + Registers.Y.W) & 0xFFFF);
-                Size = 2;
                 break;
 
             // Direct Page Indirect Long:
@@ -177,7 +165,6 @@ struct SInstruction
                 Operand = Operands[0];
                 Reference = Operand + Registers.D.W;
                 IndirectReference = (S9xDebugGetByte(Reference + 2) << 16) | S9xDebugGetWord(Reference);
-                Size = 2;
                 break;
 
             // Direct Page Indirect Indexed Long:
@@ -185,49 +172,42 @@ struct SInstruction
                 Operand = Operands[0];
                 Reference = Operand + Registers.D.W;
                 IndirectReference = (S9xDebugGetByte(Reference + 2) << 16) | ((S9xDebugGetWord(Reference) + Registers.Y.W) & 0xFFFF);
-                Size = 2;
                 break;
 
             // Absolute:
             case 14:
                 Operand = (Operands[1] << 8) | Operands[0];
                 Reference = (Registers.DB << 16) | Operand;
-                Size = 3;
                 break;
 
             // Absolute Indexed (with X):
             case 15:
                 Operand = (Operands[1] << 8) | Operands[0];
                 Reference = (Registers.DB << 16) | (Operand + Registers.X.W);
-                Size = 3;
                 break;
 
             // Absolute Indexed (with Y):
             case 16:
                 Operand = (Operands[1] << 8) | Operands[0];
                 Reference = (Registers.DB << 16) | (Operand + Registers.Y.W);
-                Size = 3;
                 break;
 
             // Absolute Long:
             case 17:
                 Operand = (Operands[2] << 16) | (Operands[1] << 8) | Operands[0];
                 Reference = Operand;
-                Size = 4;
                 break;
 
             // Absolute Indexed Long:
             case 18:
                 Operand = (Operands[2] << 16) | (Operands[1] << 8) | Operands[0];
                 Reference = (Operands[2] << 16) | (((Operands[1] << 8) + Operands[0] + Registers.X.W) & 0xFFFF);
-                Size = 4;
                 break;
 
             // Stack Relative:
             case 19:
                 Operand = Operands[0];
                 /* Reference = Operand + Registers.S.W; */  // Don't keep track of stack positions.
-                Size = 2;
                 break;
 
             // Stack Relative Indirect Indexed:
@@ -236,7 +216,6 @@ struct SInstruction
                 Reference = Operand + Registers.S.W;
                 IndirectReference = (Registers.DB << 16) | ((S9xDebugGetWord(Reference) + Registers.Y.W) & 0xFFFF);
                 Reference = UNDEFINED;  // Don't keep track of stack positions.
-                Size = 2;
                 break;
 
             // Absolute Indirect:
@@ -244,7 +223,6 @@ struct SInstruction
                 Operand = (Operands[1] << 8) | Operands[0];
                 Reference = Operand;
                 IndirectReference = (Registers.PB << 16) | S9xDebugGetWord(Reference);
-                Size = 3;
                 break;
 
             // Absolute Indirect Long:
@@ -252,7 +230,6 @@ struct SInstruction
                 Operand = (Operands[1] << 8) | Operands[0];
                 Reference = Operand;
                 IndirectReference = (S9xDebugGetByte(Reference + 2) << 16) | S9xDebugGetWord(Reference);
-                Size = 3;
                 break;
 
             // Absolute Indexed Indirect:
@@ -260,26 +237,22 @@ struct SInstruction
                 Operand = (Operands[1] << 8) | Operands[0];
                 Reference = (Registers.PB << 16) | ((Operand + Registers.X.W) & 0xFFFF);
                 IndirectReference = S9xDebugGetWord(Reference);
-                Size = 3;
                 break;
 
             // Implied Accumulator:
             case 24:
-                Size = 1;
                 break;
 
             // MVN/MVP src, dst:
             case 25:
                 Operand = (Operands[1] << 8) | Operands[0];
                 // TODO: Multiple references.
-                Size = 3;
                 break;
 
             // PEA:
             case 26:
                 Operand = (Operands[1] << 8) | Operands[0];
                 // TODO: Check if it makes sense to consider it a reference.
-                Size = 3;
                 break;
 
             // PEI Direct Page Indirect:
@@ -288,7 +261,6 @@ struct SInstruction
                 Reference = Operand + Registers.D.W;
                 // IndirectReference = S9xDebugGetWord(Reference);
                 // TODO: Should it be counted as a reference?
-                Size = 2;
                 break;
         }
 
@@ -336,7 +308,7 @@ void GilgameshSave()
     SQL("DROP TABLE IF EXISTS instructions");
     SQL("CREATE TABLE instructions(pc      INTEGER PRIMARY KEY,"
                                   "opcode  INTEGER NOT NULL,"
-                                  "size    INTEGER NOT NULL,"
+                                  "flags   INTEGER NOT NULL,"
                                   "operand INTEGER)");
 
     SQL("DROP TABLE IF EXISTS references_");
@@ -349,19 +321,15 @@ void GilgameshSave()
     SQL("CREATE TABLE vectors(pc   INTEGER PRIMARY KEY,"
                              "type INTEGER NOT NULL)");
 
-    SQL("DROP TABLE IF EXISTS labels");
-    SQL("CREATE TABLE labels(address INTEGER PRIMARY KEY,"
-                            "name    TEXT NOT NULL)");
-
     SQL("BEGIN TRANSACTION");
     for (auto& KeyValue: Instructions)
     {
         SInstruction& I = KeyValue.second;
 
         if (I.Operand != UNDEFINED)
-            SQL("INSERT INTO instructions VALUES(%u, %u, %u, %d)", I.PC, I.Opcode, I.Size, I.Operand);
+            SQL("INSERT INTO instructions VALUES(%u, %u, %u, %d)", I.PC, I.Opcode, I.Flags, I.Operand);
         else
-            SQL("INSERT INTO instructions VALUES(%u, %u, %u, NULL)", I.PC, I.Opcode, I.Size);
+            SQL("INSERT INTO instructions VALUES(%u, %u, %u, NULL)", I.PC, I.Opcode, I.Flags);
 
         for (int DirectReference: I.References)
             SQL("INSERT INTO references_ VALUES(%d, %d, %d)", I.PC, DirectReference, DIRECT_REFERENCE);
