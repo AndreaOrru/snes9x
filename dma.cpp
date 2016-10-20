@@ -184,6 +184,7 @@
 #include "spc7110emu.h"
 #ifdef DEBUGGER
 #include "missing.h"
+#include "gilgamesh.h"
 #endif
 
 #define ADD_CYCLES(n)	{ CPU.PrevCycles = CPU.Cycles; CPU.Cycles += (n); S9xCheckInterrupts(); }
@@ -506,6 +507,8 @@ bool8 S9xDoDMA (uint8 Channel)
 
 		S9xMessage(S9X_TRACE, S9X_DMA_TRACE, String);
 	}
+
+  GilgameshTraceDMA(*d);
 #endif
 
 	// Do Transfer

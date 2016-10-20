@@ -69,7 +69,7 @@ snes9x: $(OBJECTS)
 	$(CCC) $(INCLUDES) -c $(CCFLAGS) -fexceptions $*.cpp -o $@
 
 ../gilgamesh.o: ../gilgamesh.cpp
-	$(CCC) $(INCLUDES) -c $(CCFLAGS) -std=c++11 $*.cpp -o $@
+	$(CCC) $(INCLUDES) -c $(CCFLAGS) -std=gnu++14 $*.cpp -o $@
 
 .cpp.o:
 	$(CCC) $(INCLUDES) -c $(CCFLAGS) $*.cpp -o $@

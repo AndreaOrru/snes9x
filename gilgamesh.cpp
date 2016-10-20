@@ -272,8 +272,27 @@ struct SInstruction
     }
 };
 
+union SDMATransfer
+{
+    struct
+    {
+        unsigned source : 24;
+        unsigned destination : 24;
+        unsigned bytes : 16;
+    };
+    uint64 hash;
+
+    bool operator==(const SDMATransfer& other) const { return hash == other.hash; }
+};
+
+template<> struct std::hash<SDMATransfer>
+{
+    size_t operator()(const SDMATransfer& DMATransfer) const { return DMATransfer.hash; }
+};
+
 static std::unordered_map<uint32, SInstruction> Instructions;
 static std::unordered_map<uint32, VectorType> Vectors;
+static std::unordered_set<SDMATransfer> DMATransfers;
 
 void GilgameshTrace(uint8 Bank, uint16 Address)
 {
@@ -291,6 +310,17 @@ void GilgameshTrace(uint8 Bank, uint16 Address)
 void GilgameshTraceVector(uint32 PC, VectorType Type)
 {
     Vectors[PC] = Type;
+}
+
+void GilgameshTraceDMA(SDMA& DMA)
+{
+    SDMATransfer DMATransfer = {
+        .source      = (unsigned) ((DMA.ABank << 16) | DMA.AAddress),
+        .destination = (unsigned) 0,
+        .bytes       = (unsigned) DMA.TransferBytes,
+    };
+
+    DMATransfers.insert(DMATransfer);
 }
 
 void GilgameshSave()
@@ -317,6 +347,12 @@ void GilgameshSave()
                                  "type    INTEGER,"
                                  "PRIMARY KEY (pointer, pointee, type))");
 
+    SQL("DROP TABLE IF EXISTS dma");
+    SQL("CREATE TABLE dma(source      INTEGER,"
+                         "destination INTEGER,"
+                         "bytes       INTEGER,"
+                         "PRIMARY KEY (source, destination, bytes))");
+
     SQL("DROP TABLE IF EXISTS vectors");
     SQL("CREATE TABLE vectors(pc   INTEGER PRIMARY KEY,"
                              "type INTEGER NOT NULL)");
@@ -335,6 +371,11 @@ void GilgameshSave()
             SQL("INSERT INTO references_ VALUES(%d, %d, %d)", I.PC, DirectReference, DIRECT_REFERENCE);
         for (int IndirectReference: I.IndirectReferences)
             SQL("INSERT INTO references_ VALUES(%d, %d, %d)", I.PC, IndirectReference, INDIRECT_REFERENCE);
+    }
+    for (auto& DMATransfer: DMATransfers)
+    {
+        SQL("INSERT INTO dma VALUES(%d, %d, %d)",
+            DMATransfer.source, DMATransfer.destination, DMATransfer.bytes);
     }
     for (auto& KeyValue: Vectors)
     {
