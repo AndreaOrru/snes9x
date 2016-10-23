@@ -387,7 +387,7 @@ void GilgameshSave()
                          "source      INTEGER,"
                          "destination INTEGER,"
                          "bytes       INTEGER,"
-                         "PRIMARY KEY (source, destination, bytes))");
+                         "PRIMARY KEY (pc, source, destination, bytes))");
 
     SQL("DROP TABLE IF EXISTS vectors");
     SQL("CREATE TABLE vectors(pc   INTEGER PRIMARY KEY,"
