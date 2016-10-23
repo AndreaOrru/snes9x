@@ -15,6 +15,7 @@ static const int UNDEFINED = -1;
 enum { DIRECT_REFERENCE = 0, INDIRECT_REFERENCE = 1 };
 
 static sqlite3* Database;
+static uint32 DMALastPC;
 extern int AddrModes[256];
 
 template<typename... TArgs> int SQLExec(const char* Format, TArgs... Args)
@@ -264,30 +265,42 @@ struct SInstruction
                 break;
         }
 
-        if (Reference != UNDEFINED)
+        if (Reference != UNDEFINED) {
             this->References.insert(Reference);
+
+            // TODO: technically DMA could also be indirect.
+            if (Reference == 0x420B)
+                DMALastPC = PC;
+        }
 
         if (IndirectReference != UNDEFINED)
             this->IndirectReferences.insert(IndirectReference);
     }
 };
 
-union SDMATransfer
+struct SDMATransfer
 {
-    struct
-    {
-        unsigned source : 24;
-        unsigned destination : 24;
-        unsigned bytes : 16;
-    };
-    uint64 hash;
+    uint32 pc;
+    uint32 source;
+    uint16 bytes;
+    DMADestinationType destination;
 
-    bool operator==(const SDMATransfer& other) const { return hash == other.hash; }
+    bool operator==(const SDMATransfer& other) const
+    {
+        return pc == other.pc && source == other.source &&
+            bytes == other.bytes && destination == other.destination;
+    }
 };
 
 template<> struct std::hash<SDMATransfer>
 {
-    size_t operator()(const SDMATransfer& DMATransfer) const { return DMATransfer.hash; }
+    size_t operator()(const SDMATransfer& DMATransfer) const
+    {
+        uint64 hash;
+        hash  = (uint64) DMATransfer.pc    << 32 | DMATransfer.source;
+        hash ^= (uint64) DMATransfer.bytes << 32 | DMATransfer.destination;
+        return hash;
+    }
 };
 
 static std::unordered_map<uint32, SInstruction> Instructions;
@@ -314,11 +327,33 @@ void GilgameshTraceVector(uint32 PC, VectorType Type)
 
 void GilgameshTraceDMA(SDMA& DMA)
 {
-    SDMATransfer DMATransfer = {
-        .source      = (unsigned) ((DMA.ABank << 16) | DMA.AAddress),
-        .destination = (unsigned) 0,
-        .bytes       = (unsigned) DMA.TransferBytes,
-    };
+    // Only log incrementing CPU -> PPU stuff for now:
+    if (DMA.ReverseTransfer || DMA.TransferMode > 2 || DMA.AAddressFixed || DMA.AAddressDecrement)
+        return;
+
+    SDMATransfer DMATransfer;
+    DMATransfer.pc     = DMALastPC;
+    DMATransfer.source = (unsigned) ((DMA.ABank << 16) | DMA.AAddress);
+    DMATransfer.bytes  = (unsigned) DMA.TransferBytes;
+
+    switch (DMA.BAddress)
+    {
+        // VRAM:
+        case 0x18:
+        case 0x19:
+            DMATransfer.destination = DMA_VRAM;
+            break;
+
+        // CGRAM:
+        case 0x22:
+            DMATransfer.destination = DMA_CGRAM;
+            break;
+
+        // OBJADDR:
+        case 0x04:
+            DMATransfer.destination = DMA_OAM;
+            break;
+    }
 
     DMATransfers.insert(DMATransfer);
 }
@@ -348,7 +383,8 @@ void GilgameshSave()
                                  "PRIMARY KEY (pointer, pointee, type))");
 
     SQL("DROP TABLE IF EXISTS dma");
-    SQL("CREATE TABLE dma(source      INTEGER,"
+    SQL("CREATE TABLE dma(pc          INTEGER,"
+                         "source      INTEGER,"
                          "destination INTEGER,"
                          "bytes       INTEGER,"
                          "PRIMARY KEY (source, destination, bytes))");
@@ -374,8 +410,8 @@ void GilgameshSave()
     }
     for (auto& DMATransfer: DMATransfers)
     {
-        SQL("INSERT INTO dma VALUES(%d, %d, %d)",
-            DMATransfer.source, DMATransfer.destination, DMATransfer.bytes);
+        SQL("INSERT INTO dma VALUES(%d, %d, %d, %d)",
+            DMATransfer.pc, DMATransfer.source, DMATransfer.destination, DMATransfer.bytes);
     }
     for (auto& KeyValue: Vectors)
     {

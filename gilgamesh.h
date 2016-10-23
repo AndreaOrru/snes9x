@@ -12,6 +12,13 @@ enum VectorType
     VECTOR_IRQ = 2
 };
 
+enum DMADestinationType
+{
+    DMA_VRAM = 0,
+    DMA_CGRAM = 1,
+    DMA_OAM = 2,
+};
+
 void GilgameshSave();
 void GilgameshTrace(uint8 Bank, uint16 Address);
 void GilgameshTraceVector(uint32 PC, VectorType Type);
