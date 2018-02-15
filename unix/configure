@@ -1288,7 +1288,7 @@ Optional Features:
   --enable-mtune          use the specified value for the -mtune/-mcpu flag
                           (default: no)
   --enable-gamepad        enable gamepad support if available (default: yes)
-  --enable-debugger       enable debugger (default: no)
+  --enable-debugger       enable debugger and SQLite tracing (default: yes)
   --enable-netplay        enable netplay support (default: no)
   --enable-gzip           enable GZIP support through zlib (default: yes)
   --enable-zip            enable ZIP support through zlib (default: yes)
@@ -4535,7 +4535,7 @@ S9XDEBUGGER="#S9XDEBUGGER=1"
 if test "${enable_debugger+set}" = set; then
   enableval=$enable_debugger;
 else
-  enable_debugger="no"
+  enable_debugger="yes"
 fi
 
 
