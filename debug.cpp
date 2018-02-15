@@ -2563,7 +2563,12 @@ void S9xDoDebug (void)
 
 void S9xTrace (void)
 {
-	GilgameshTrace(Registers.PB, Registers.PCw);
+	char	msg[512];
+
+	ENSURE_TRACE_OPEN(trace, "trace.log", "a")
+
+	debug_cpu_op_print(msg, Registers.PB, Registers.PCw);
+	fprintf(trace, "%s\n", msg);
 }
 
 void S9xSA1Trace (void)
@@ -2576,9 +2581,33 @@ void S9xSA1Trace (void)
 	fprintf(trace2, "%s\n", msg);
 }
 
-void S9xTraceMessage (const char *s) {}
+void S9xTraceMessage (const char *s)
+{
+	if (s)
+	{
+		if (trace)
+			fprintf(trace, "%s\n", s);
+		else
+		if (trace2)
+			fprintf(trace2, "%s\n", s);
+	}
+}
 
-void S9xTraceFormattedMessage (const char *s, ...) {}
+void S9xTraceFormattedMessage (const char *s, ...)
+{
+	char	msg[512];
+
+	if (s)
+	{
+		va_list	argptr;
+
+		va_start(argptr, s);
+		vsprintf(msg, s, argptr);
+		va_end(argptr);
+
+		S9xTraceMessage(msg);
+	}
+}
 
 void S9xPrintHVPosition (char *s)
 {

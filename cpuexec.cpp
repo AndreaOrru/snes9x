@@ -253,6 +253,7 @@ void S9xMainLoop (void)
 
 		if (CPU.Flags & TRACE_FLAG)
 			S9xTrace();
+		GilgameshTrace();
 
 		if (CPU.Flags & SINGLE_STEP_FLAG)
 		{
