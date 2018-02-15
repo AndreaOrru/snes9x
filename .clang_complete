@@ -1,4 +1,4 @@
--std=c++11
+-std=gnu++14
 -Wall
 -Wextra
 -DDEBUGGER
