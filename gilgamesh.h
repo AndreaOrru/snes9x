@@ -16,7 +16,7 @@ enum DMADestinationType
 {
     DMA_VRAM = 0,
     DMA_CGRAM = 1,
-    DMA_OAM = 2,
+    DMA_OAM = 2
 };
 
 void GilgameshSave();
