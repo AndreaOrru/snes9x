@@ -268,7 +268,7 @@ static void S9xSoftResetCPU (void)
 	S9xUnpackStatus();
 
 #ifdef DEBUGGER
-    GilgameshTraceVector(Registers.PC.xPBPC, VECTOR_RESET);
+	GilgameshTraceVector(Registers.PC.xPBPC, VECTOR_RESET);
 #endif
 }
 

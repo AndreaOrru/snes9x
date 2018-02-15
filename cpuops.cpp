@@ -2822,7 +2822,7 @@ void S9xOpcode_IRQ (void)
 	}
 
 #ifdef DEBUGGER
-    GilgameshTraceVector(Registers.PC.xPBPC, VECTOR_IRQ);
+	GilgameshTraceVector(Registers.PC.xPBPC, VECTOR_IRQ);
 #endif
 }
 
@@ -2901,7 +2901,7 @@ void S9xOpcode_NMI (void)
 	}
 
 #ifdef DEBUGGER
-    GilgameshTraceVector(Registers.PC.xPBPC, VECTOR_NMI);
+	GilgameshTraceVector(Registers.PC.xPBPC, VECTOR_NMI);
 #endif
 }
 

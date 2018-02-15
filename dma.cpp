@@ -508,7 +508,7 @@ bool8 S9xDoDMA (uint8 Channel)
 		S9xMessage(S9X_TRACE, S9X_DMA_TRACE, String);
 	}
 
-  GilgameshTraceDMA(*d);
+	GilgameshTraceDMA(*d);
 #endif
 
 	// Do Transfer
