@@ -185,6 +185,7 @@
 #include "snapshot.h"
 #ifdef DEBUGGER
 #include "debug.h"
+#include "gilgamesh.h"
 #include "missing.h"
 #endif
 
